@@ -71,12 +71,6 @@ jobs:
 
 
 
-      - name: Install lsb-release
-        if: runner.os == 'Linux'
-        run: |
-          apt-get update
-          apt-get install -y lsb-release
-
       - name: Install CUDA ${{ inputs.cuda-version }}
         if: ${{ inputs.cuda-version != 'cpu' }}
         uses: Jimver/cuda-toolkit@v0.2.27
