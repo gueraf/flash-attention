@@ -12,7 +12,6 @@ on:
 
 jobs:
   setup_release:
-    name: Create Release
     runs-on: self-hosted
     outputs:
       release-version: ${{ steps.get_sha.outputs.version }}
@@ -34,12 +33,11 @@ jobs:
     name: Build Wheel
     needs: setup_release
     strategy:
-      max-parallel: 1
       fail-fast: false
       matrix:
         # Using ubuntu-22.04 instead of 24.04 for more compatibility (glibc). Ideally we'd use the
         # manylinux docker image, but I haven't figured out how to install CUDA on manylinux.
-        os: [ubuntu-22.04, ubuntu-22.04-arm]
+        os: [self-hosted]
         python-version: ["3.12"]
         torch-version: ["2.9.0"]
         cuda-version: ["12.9.1"]  # "13.0.1" not yet available.
