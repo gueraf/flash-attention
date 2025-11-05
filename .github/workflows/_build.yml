@@ -65,15 +65,9 @@ jobs:
         # https://github.com/easimon/maximize-build-space/blob/master/action.yml
         # https://github.com/easimon/maximize-build-space/tree/test-report
         run: |
-          if [ "$(id -un)" != "root" ]; then
-            sudo rm -rf /usr/share/dotnet
-            sudo rm -rf /opt/ghc
-            sudo rm -rf /opt/hostedtoolcache/CodeQL
-          else
-            rm -rf /usr/share/dotnet
-            rm -rf /opt/ghc
-            rm -rf /opt/hostedtoolcache/CodeQL
-          fi
+          rm -rf /usr/share/dotnet
+          rm -rf /opt/ghc
+          rm -rf /opt/hostedtoolcache/CodeQL
 
       - name: Set up swap space
         if: runner.os == 'Linux'
@@ -144,11 +138,7 @@ jobs:
       - name: Unpack build cache
         run: |
           echo ::group::Adjust timestamps
-          if [ "$(id -un)" != "root" ]; then
-            sudo find / -exec touch -t 197001010000 {} + || true
-          else
-            find / -exec touch -t 197001010000 {} + || true
-          fi
+          find / -exec touch -t 197001010000 {} + || true
           echo ::endgroup::
 
           if [ -f build.tar ]; then
