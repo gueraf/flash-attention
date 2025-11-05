@@ -13,7 +13,7 @@ on:
 jobs:
   setup_release:
     name: Create Release
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       release-version: ${{ steps.get_sha.outputs.version }}
     steps:
@@ -68,7 +68,7 @@ jobs:
   publish_package:
     name: Publish package
     needs: [build_wheels]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

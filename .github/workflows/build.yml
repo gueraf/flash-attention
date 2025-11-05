@@ -7,7 +7,7 @@ on:
         description: "The runner to use for the build"
         required: true
         type: string
-        default: ubuntu-22.04
+        default: self-hosted
       python-version:
         description: "The Python version to use for the build"
         required: true
