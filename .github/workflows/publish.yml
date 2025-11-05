@@ -34,6 +34,7 @@ jobs:
     name: Build Wheel
     needs: setup_release
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         # Using ubuntu-22.04 instead of 24.04 for more compatibility (glibc). Ideally we'd use the
