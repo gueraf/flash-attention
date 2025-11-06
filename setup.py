@@ -188,7 +188,8 @@ def detect_hipify_v2():
 def append_nvcc_threads(nvcc_extra_args):
     nvcc_threads = os.getenv("NVCC_THREADS") or "4"
     if platform.uname().machine in ["aarch64", "arm64"]:
-        nvcc_extra_args.append("--ptxas-options=-v")
+        pass
+        # nvcc_extra_args.append("--ptxas-options=-v")
     return nvcc_extra_args + ["--threads", nvcc_threads]
 
 
