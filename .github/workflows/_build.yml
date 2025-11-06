@@ -72,6 +72,31 @@ jobs:
 
 
 
+<<<<<<< HEAD
+=======
+      - name: Check if CUDA is available
+        id: check_cuda
+        run: |
+          if command -v nvcc &> /dev/null; then
+            echo "CUDA is already installed."
+            echo "installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "CUDA is not installed."
+            echo "installed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install CUDA ${{ inputs.cuda-version }}
+        if: steps.check_cuda.outputs.installed == 'false' && inputs.cuda-version != 'cpu'
+        uses: Jimver/cuda-toolkit@v0.2.27
+        id: cuda-toolkit
+        with:
+          cuda: ${{ inputs.cuda-version }}
+          linux-local-args: '["--toolkit"]'
+          # default method is "local", and we're hitting some error with caching for CUDA 11.8 and 12.1
+          # method: ${{ (inputs.cuda-version == '11.8.0' || inputs.cuda-version == '12.1.0') && 'network' || 'local' }}
+          method: "network"
+          sub-packages: '["nvcc"]'
+>>>>>>> 1223de9 (Install cuda if necessary; run on arm.)
 
       - name: Install PyTorch ${{ inputs.torch-version }}+cu${{ inputs.cuda-version }}
         run: |
