@@ -571,16 +571,27 @@ class NinjaBuildExtension(BuildExtension):
         if not os.environ.get("MAX_JOBS"):
             import psutil
 
-            # calculate the maximum allowed NUM_JOBS based on cores
-            max_num_jobs_cores = max(1, os.cpu_count() // 2)
+            # Print RAM information
+            total_memory_gb = psutil.virtual_memory().total / (1024 ** 3)
+            available_memory_gb = psutil.virtual_memory().available / (1024 ** 3)
+            print(f"Total RAM: {total_memory_gb:.2f} GB")
+            print(f"Available RAM: {available_memory_gb:.2f} GB")
 
-            # calculate the maximum allowed NUM_JOBS based on free memory
-            free_memory_gb = psutil.virtual_memory().available / (1024 ** 3)  # free memory in GB
-            max_num_jobs_memory = int(free_memory_gb / 9)  # each JOB peak memory cost is ~8-9GB when threads = 4
+            # Check if the machine is ARM-based
+            if platform.uname().machine in ["aarch64", "arm64"]:
+                max_jobs = 1
+            else:
+                # calculate the maximum allowed NUM_JOBS based on cores
+                max_num_jobs_cores = max(1, os.cpu_count() // 2)
 
-            # pick lower value of jobs based on cores vs memory metric to minimize oom and swap usage during compilation
-            max_jobs = max(1, min(max_num_jobs_cores, max_num_jobs_memory))
+                # calculate the maximum allowed NUM_JOBS based on free memory
+                free_memory_gb = psutil.virtual_memory().available / (1024 ** 3)  # free memory in GB
+                max_num_jobs_memory = int(free_memory_gb / 9)  # each JOB peak memory cost is ~8-9GB when threads = 4
+
+                # pick lower value of jobs based on cores vs memory metric to minimize oom and swap usage during compilation
+                max_jobs = max(1, min(max_num_jobs_cores, max_num_jobs_memory))
             os.environ["MAX_JOBS"] = str(max_jobs)
+            print(f"Using MAX_JOBS={max_jobs}")
 
         super().__init__(*args, **kwargs)
 
