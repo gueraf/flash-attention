@@ -164,6 +164,14 @@ jobs:
       #     ls -al build/ || true
       #     ls -al csrc/ || true
 
+      - name: Increase swap space on ARM
+        if: startsWith(runner.arch, 'ARM')
+        run: |
+          sudo fallocate -l 20G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
       - name: Build wheel
         id: build_wheel
         run: |
@@ -182,9 +190,14 @@ jobs:
           export FLASH_ATTENTION_FORCE_BUILD="TRUE"
           export FLASH_ATTENTION_FORCE_CXX11_ABI=${{ inputs.cxx11_abi }}
 
+          BUILD_COMMAND="python setup.py bdist_wheel --dist-dir=dist"
+          if startsWith(runner.arch, 'ARM'); then
+            BUILD_COMMAND="${BUILD_COMMAND} --verbose"
+          fi
+
           # 5h timeout since GH allows max 6h and we want some buffer
           EXIT_CODE=0
-          timeout 5h python setup.py bdist_wheel --dist-dir=dist || EXIT_CODE=$?
+          timeout 5h ${BUILD_COMMAND} || EXIT_CODE=$?
 
           if [ $EXIT_CODE -eq 0 ]; then
             tmpname=cu${WHEEL_CUDA_VERSION}torch${MATRIX_TORCH_VERSION}cxx11abi${{ inputs.cxx11_abi }}

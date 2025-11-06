@@ -187,6 +187,8 @@ def detect_hipify_v2():
 
 def append_nvcc_threads(nvcc_extra_args):
     nvcc_threads = os.getenv("NVCC_THREADS") or "4"
+    if platform.uname().machine in ["aarch64", "arm64"]:
+        nvcc_extra_args.append("--ptxas-options=-v")
     return nvcc_extra_args + ["--threads", nvcc_threads]
 
 
@@ -262,7 +264,7 @@ if not SKIP_CUDA_BUILD and not IS_ROCM:
     "--expt-relaxed-constexpr",
     "--expt-extended-lambda",
     "--use_fast_math",
-    "--ptxas-options=-v",
+
     # "--ptxas-options=-O2",
     # "-lineinfo",
     # "-DFLASHATTENTION_DISABLE_BACKWARD",
