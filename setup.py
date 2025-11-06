@@ -582,7 +582,13 @@ class NinjaBuildExtension(BuildExtension):
             max_jobs = max(1, min(max_num_jobs_cores, max_num_jobs_memory))
             os.environ["MAX_JOBS"] = str(max_jobs)
 
+        print(f"Platform: {platform.platform()}")
+        print(f"Machine: {platform.machine()}")
+        print(f"Release: {platform.release()}")
+        print(f"System: {platform.system()}")
+
         if platform.uname().machine in ["aarch64", "arm64"]:
+            os.environ["MAX_JOBS"] = "1"
             os.environ["NVCC_THREADS"] = "1"
 
         print(f"MAX_JOBS={os.environ.get('MAX_JOBS')}")
