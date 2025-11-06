@@ -157,10 +157,7 @@ jobs:
           export FLASH_ATTENTION_FORCE_BUILD="TRUE"
           export FLASH_ATTENTION_FORCE_CXX11_ABI=${{ inputs.cxx11_abi }}
 
-          BUILD_COMMAND="python setup.py bdist_wheel --dist-dir=dist"
-          if startsWith(runner.arch, 'ARM'); then
-            BUILD_COMMAND="${BUILD_COMMAND} --verbose"
-          fi
+          BUILD_COMMAND="python setup.py bdist_wheel --dist-dir=dist ${{ startsWith(runner.arch, 'ARM') && '--verbose' || '' }}" 
 
           # 5h timeout since GH allows max 6h and we want some buffer
           EXIT_CODE=0
