@@ -1,3 +1,6 @@
+# Find prebuilt arm and x86 wheels [here](https://github.com/gueraf/flash-attention/releases/tag/dev-c2f5281).
+
+
 # FlashAttention
 This repository provides the official implementation of FlashAttention and
 FlashAttention-2 from the
