@@ -139,39 +139,6 @@ jobs:
           python -c "import torch; print('CUDA:', torch.version.cuda)"
           python -c "from torch.utils import cpp_extension; print (cpp_extension.CUDA_HOME)"
 
-      # - name: Restore build cache
-      #   uses: actions/cache/restore@v4
-      #   with:
-      #     path: build.tar
-      #     key: build-${{ inputs.release-version }}-${{ inputs.python-version }}-${{ inputs.cuda-version }}-${{ inputs.torch-version }}-${{ inputs.cxx11_abi }}-${{ github.run_number }}-${{ github.run_attempt }}
-      #     restore-keys: |
-      #       build-${{ inputs.release-version }}-${{ inputs.python-version }}-${{ inputs.cuda-version }}-${{ inputs.torch-version }}-${{ inputs.cxx11_abi }}-
-
-      # - name: Unpack build cache
-      #   run: |
-      #     echo ::group::Adjust timestamps
-      #     find / -exec touch -t 197001010000 {} + || true
-      #     echo ::endgroup::
-
-      #     if [ -f build.tar ]; then
-      #       find . -mindepth 1 -maxdepth 1 ! -name 'build.tar' -exec rm -rf {} +
-      #       tar -xpvf build.tar -C .
-      #     else
-      #       echo "No build.tar found, skipping"
-      #     fi
-
-      #     ls -al ./
-      #     ls -al build/ || true
-      #     ls -al csrc/ || true
-
-      - name: Increase swap space on ARM
-        if: startsWith(runner.arch, 'ARM')
-        run: |
-          sudo fallocate -l 20G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-
       - name: Build wheel
         id: build_wheel
         run: |
