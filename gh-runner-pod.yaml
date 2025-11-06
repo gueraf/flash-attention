@@ -17,22 +17,13 @@ spec:
   # The pod will be automatically restarted by the kubelet if it fails.
   restartPolicy: Always
   # Select a node with the correct architecture and a GPU.
-  # For x86/amd64:
-  nodeSelector:
-    kubernetes.io/arch: amd64
-  # For ARM/aarch64, you would use:
-  # nodeSelector:
-  #   kubernetes.io/arch: arm64
+
   tolerations:
   - key: "nvidia.com/gpu"
     operator: "Exists"
   containers:
   - name: gh-runner-flashattention
-    # Use the appropriate image for your architecture.
-    # For x86/amd64:
-    image: gueraf/self_hosted_cuda_runner:latest
-    # For ARM/aarch64:
-    # image: gueraf/self_hosted_cuda_runner:arm
+    image: gueraf/self_hosted_cuda_runner:ARCH_IMAGE_TAG
     command: ["/bin/bash", "-c"]
     args:
       - |
@@ -56,12 +47,8 @@ spec:
           exit 1
         fi
 
-        # Set runner name and labels.
-        # For x86/amd64:
         RUNNER_NAME=${NODE_NAME}
-        RUNNER_LABELS="self-hosted,Linux,X64,gpu,${NODE_NAME}"
-        # For ARM/aarch64, you would use:
-        # RUNNER_LABELS="self-hosted-arm,Linux,ARM64,gpu,${NODE_NAME}"
+        RUNNER_LABELS="ARCH_RUNNER_LABELS,${NODE_NAME}"
 
         # Configure the runner.
         ./config.sh --url https://github.com/gueraf/flash-attention --token ${REG_TOKEN} --name ${RUNNER_NAME} --labels ${RUNNER_LABELS} --unattended
