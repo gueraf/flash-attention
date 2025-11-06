@@ -592,7 +592,7 @@ class NinjaBuildExtension(BuildExtension):
 
         if platform.uname().machine in ["aarch64", "arm64"]:
             os.environ["MAX_JOBS"] = "1"
-            os.environ["NVCC_THREADS"] = "1"
+            os.environ["NVCC_THREADS"] = "12"
 
         print(f"MAX_JOBS={os.environ.get('MAX_JOBS')}")
         print(f"NVCC_THREADS={os.environ.get('NVCC_THREADS')}")
