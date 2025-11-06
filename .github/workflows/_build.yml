@@ -60,20 +60,22 @@ jobs:
           echo "WHEEL_CUDA_VERSION=$(echo ${{ inputs.cuda-version }} | awk -F \. {'print $1'})" >> $GITHUB_ENV
           echo "MATRIX_PYTHON_VERSION=$(echo ${{ inputs.python-version }} | awk -F \. {'print $1 $2'})" >> $GITHUB_ENV
 
-      - name: Free up disk space
+      - name: Free up disk space (no sudo)
+        id: free_space_no_sudo
         if: ${{ runner.os == 'Linux' }}
-        # https://github.com/easimon/maximize-build-space/blob/master/action.yml
-        # https://github.com/easimon/maximize-build-space/tree/test-report
+        continue-on-error: true
         run: |
           rm -rf /usr/share/dotnet
           rm -rf /opt/ghc
           rm -rf /opt/hostedtoolcache/CodeQL
 
+      - name: Free up disk space (with sudo)
+        if: ${{ runner.os == 'Linux' && steps.free_space_no_sudo.outcome == 'failure' }}
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
 
-
-
-<<<<<<< HEAD
-=======
       - name: Check if CUDA is available
         id: check_cuda
         run: |
@@ -96,7 +98,6 @@ jobs:
           # method: ${{ (inputs.cuda-version == '11.8.0' || inputs.cuda-version == '12.1.0') && 'network' || 'local' }}
           method: "network"
           sub-packages: '["nvcc"]'
->>>>>>> 1223de9 (Install cuda if necessary; run on arm.)
 
       - name: Install PyTorch ${{ inputs.torch-version }}+cu${{ inputs.cuda-version }}
         run: |
