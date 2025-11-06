@@ -33,7 +33,7 @@ jobs:
   build-wheels:
     strategy:
       matrix:
-        runs-on: [self-hosted, ubuntu-22.04-arm]
+        runs-on: [self-hosted, self-hosted-arm, ubuntu-22.04-arm]  # TODO: Remove hosted arm.
     uses: ./.github/workflows/_build.yml
     with:
       runs-on: ${{ matrix.runs-on }}
