@@ -57,7 +57,7 @@ jobs:
         #     python-version: "3.13"
     uses: ./.github/workflows/_build.yml
     with:
-      runs-on: ["self-hosted", ${{ matrix.os }}]
+      runs-on: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       cuda-version: ${{ matrix.cuda-version }}
       torch-version: ${{ matrix.torch-version }}
