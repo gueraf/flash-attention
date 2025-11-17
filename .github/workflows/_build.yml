@@ -141,12 +141,10 @@ jobs:
 
       - name: Build wheel
         id: build_wheel
-        uses: Instrument-Specialist/retry-step@v1
+        uses: nick-fields/retry@v2
         with:
-          retries: 3
-          command: bash -c "$BUILD_SCRIPT"
-        env:
-          BUILD_SCRIPT: |
+          max_attempts: 3
+          command: |
             # We want setuptools >= 49.6.0 otherwise we can't compile the extension if system CUDA version is 11.7 and pytorch cuda version is 11.6
             # https://github.com/pytorch/pytorch/blob/664058fa83f1d8eede5d66418abff6e20bd76ca8/torch/utils/cpp_extension.py#L810
             # However this still fails so I'm using a newer version of setuptools
