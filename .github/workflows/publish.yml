@@ -13,7 +13,6 @@ on:
 jobs:
   setup_release:
     runs-on: self-hosted
-    retries: 3
     outputs:
       release-version: ${{ steps.get_sha.outputs.version }}
     steps:
@@ -70,7 +69,6 @@ jobs:
     name: Publish package
     needs: [build_wheels]
     runs-on: self-hosted
-    retries: 3
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -31,7 +31,6 @@ on:
 
 jobs:
   build-wheels:
-    retries: 3
     strategy:
       matrix:
         runs-on: [self-hosted, self-hosted-arm, ubuntu-22.04-arm]  # TODO: Remove hosted arm.
