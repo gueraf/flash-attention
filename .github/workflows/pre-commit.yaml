@@ -21,6 +21,7 @@ on:
 jobs:
   pre-commit:
     runs-on: self-hosted
+    retries: 3
     steps:
       - uses: actions/checkout@v4
 

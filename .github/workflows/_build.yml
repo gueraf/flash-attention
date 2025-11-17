@@ -41,6 +41,7 @@ jobs:
   build-wheel:
     runs-on: ${{ inputs.runs-on }}
     name: Build wheel (${{ inputs.release-version }}-${{ inputs.python-version }}-${{ inputs.cuda-version }}-${{ inputs.torch-version }}-${{ inputs.cxx11_abi }})
+    retries: 3
     steps:
       - name: Checkout
         uses: actions/checkout@v4
