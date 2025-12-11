@@ -55,6 +55,7 @@ jobs:
         #   # Pytorch < 2.5 does not support Python 3.13
         #   - torch-version: "2.4.0"
         #     python-version: "3.13"
+        package-path: [".", "hopper"]
     uses: ./.github/workflows/_build.yml
     with:
       runs-on: ${{ matrix.os }}
@@ -64,6 +65,7 @@ jobs:
       cxx11_abi: ${{ matrix.cxx11_abi }}
       release-version: ${{ needs.setup_release.outputs.release-version }}
       upload-to-release: true
+      cwd: ${{ matrix.package-path }}
 
   publish_package:
     name: Publish package

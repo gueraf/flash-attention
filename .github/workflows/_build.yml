@@ -32,6 +32,11 @@ on:
         description: "Upload wheel to this release"
         required: false
         type: string
+      cwd:
+        description: "Working directory for the build"
+        required: false
+        type: string
+        default: "."
 
 defaults:
   run:
@@ -161,6 +166,7 @@ jobs:
             export FLASH_ATTENTION_FORCE_BUILD="TRUE"
             export FLASH_ATTENTION_FORCE_CXX11_ABI=${{ inputs.cxx11_abi }}
 
+            cd ${{ inputs.cwd }}
             BUILD_COMMAND="python setup.py bdist_wheel --dist-dir=dist ${{ startsWith(runner.arch, 'ARM') && '--verbose' || '' }}" 
 
             # 5h timeout since GH allows max 6h and we want some buffer
@@ -195,7 +201,7 @@ jobs:
 
       - name: Log Built Wheels
         run: |
-          ls dist
+          ls ${{ inputs.cwd }}/dist
 
       - name: Get Release with tag
         id: get_current_release
@@ -213,6 +219,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_current_release.outputs.upload_url }}
-          asset_path: ./dist/${{env.wheel_name}}
+          asset_path: ${{ inputs.cwd }}/dist/${{env.wheel_name}}
           asset_name: ${{env.wheel_name}}
           asset_content_type: application/*
