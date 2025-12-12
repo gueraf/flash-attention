@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Detect architecture
 ARCH=$(uname -m)
-if [[ "${ARCH}" == "aarch64" ]]; then
+if [[ "${ARCH}" == "aarch64" || "${ARCH}" == "arm64" ]]; then
   IMAGE_TAG="arm"
   RUNNER_ARCH="ARM64"
 else
