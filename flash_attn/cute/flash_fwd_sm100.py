@@ -1291,6 +1291,7 @@ class FlashAttentionForwardSm100:
                     pipeline_kv,
                     self.q_stage,
                     q_producer_phase,
+                    self.qhead_per_kvhead if const_expr(self.pack_gqa) else 1,
                 )
 
 
@@ -1366,7 +1367,7 @@ class FlashAttentionForwardSm100:
             process_tile = False
 
             if const_expr(self.use_block_sparsity):
-                block_iter_count = get_total_block_count(blocksparse_tensors, batch_idx, head_idx, m_block)
+                block_iter_count = get_total_block_count(blocksparse_tensors, batch_idx, head_idx, m_block, self.qhead_per_kvhead if const_expr(self.pack_gqa) else 1)
                 process_tile = block_iter_count > Int32(0)
             else:
                 n_block_min, n_block_max = block_info.get_n_block_min_max(seqlen, m_block, split_idx, num_splits)
@@ -1617,7 +1618,7 @@ class FlashAttentionForwardSm100:
             seqlen = SeqlenInfoCls(batch_idx)
             n_block_min, n_block_max = block_info.get_n_block_min_max(seqlen, m_block, split_idx, num_splits)
 
-            mask = AttentionMaskCls(seqlen.seqlen_q, seqlen.seqlen_k)
+            mask = AttentionMaskCls(seqlen)
             shared_mask_kwargs = dict(
                 m_block=self.q_stage * m_block + stage,
                 thr_mma=thr_mma_qk,
@@ -1674,7 +1675,7 @@ class FlashAttentionForwardSm100:
             softmax.reset()
 
             if const_expr(self.use_block_sparsity):
-                tile_block_count = get_total_block_count(blocksparse_tensors, batch_idx, head_idx, m_block)
+                tile_block_count = get_total_block_count(blocksparse_tensors, batch_idx, head_idx, m_block, self.qhead_per_kvhead if const_expr(self.pack_gqa) else 1)
                 has_work = tile_block_count > Int32(0)
             else:
                 tile_block_count = n_block_max - n_block_min
@@ -1711,6 +1712,13 @@ class FlashAttentionForwardSm100:
 
             # Block sparse or dense iteration
             if const_expr(self.use_block_sparsity):
+                # When aux_tensors exist, Q indices beyond seqlen_q must be wrapped to avoid
+                # OOB aux_tensor access. Only edge tiles (where m_tile_end > seqlen_q) need this.
+                if const_expr(aux_tensors is not None):
+                    m_tile_end = (self.q_stage * m_block + stage + 1) * self.m_block_size
+                    check_m_boundary = m_tile_end > seqlen.seqlen_q
+                else:
+                    check_m_boundary = False
                 (
                     mma_si_consumer_phase,
                     si_corr_producer_phase,
@@ -1734,6 +1742,8 @@ class FlashAttentionForwardSm100:
                     self.mbar_P_full_2_offset,
                     self.q_stage,
                     Int32(stage),
+                    check_m_boundary,
+                    self.qhead_per_kvhead if const_expr(self.pack_gqa) else 1,
                 )
                 if not empty_tile:
                     sScale[tidx + stage * self.m_block_size] = softmax.row_sum[0]
@@ -2026,7 +2036,7 @@ class FlashAttentionForwardSm100:
             stats = [(0.0, -Float32.inf if const_expr(mLSE is not None or learnable_sink is not None) else None, True)] * self.q_stage
 
             if const_expr(self.use_block_sparsity):
-                total_block_count = get_total_block_count(blocksparse_tensors, batch_idx, head_idx, m_block)
+                total_block_count = get_total_block_count(blocksparse_tensors, batch_idx, head_idx, m_block, self.qhead_per_kvhead if const_expr(self.pack_gqa) else 1)
                 has_work = total_block_count > Int32(0)
             else:
                 total_block_count = n_block_max - n_block_min
@@ -2386,8 +2396,6 @@ class FlashAttentionForwardSm100:
             tOcO = gmem_thr_copy_O.partition_S(cO)
             t0OcO = gmem_tiled_copy_O.get_slice(0).partition_S(cO)
             tOpO = utils.predicate_k(tOcO, limit=mO_cur.shape[1])
-            # TODO: the packgqa case isn't correct rn (sometimes IMA), disabling it
-            assert not self.pack_gqa
             pack_gqa = PackGQA(
                 self.m_block_size,
                 self.head_dim_v_padded,
@@ -2480,8 +2488,6 @@ class FlashAttentionForwardSm100:
                     tOcO = gmem_thr_copy_O.partition_S(cO)
                     t0OcO = gmem_tiled_copy_O.get_slice(0).partition_S(cO)
                     tOpO = utils.predicate_k(tOcO, limit=mO.shape[1])
-                    # TODO: the packgqa case isn't correct rn (sometimes IMA), disabling it
-                    assert not self.pack_gqa
                     pack_gqa = PackGQA(
                         self.m_block_size,
                         self.head_dim_v_padded,
