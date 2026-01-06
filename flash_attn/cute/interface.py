@@ -244,7 +244,7 @@ def _flash_attn_fwd(
         else _compute_capability
     )
 
-    assert compute_capability in [9, 10, 11], "Unsupported compute capability. Supported: 9.x, 10.x, 11.x"
+    assert compute_capability in [9, 10, 11], f"Unsupported compute capability {compute_capability}. Supported: 9.x, 10.x, 11.x."
 
     use_block_sparsity = block_sparse_tensors is not None
 
