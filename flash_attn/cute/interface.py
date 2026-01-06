@@ -51,10 +51,12 @@ from flash_attn.cute.block_sparsity import (
     get_block_sparse_expected_shapes_bwd,
 )
 
+
 @lru_cache(maxsize=None)
 def _get_device_capability():
     """Cached device capability check."""
     return torch.cuda.get_device_capability()[0]
+
 
 def maybe_contiguous(x):
     return x.contiguous() if x is not None and x.stride(-1) != 1 else x
@@ -226,7 +228,9 @@ def _flash_attn_fwd(
             *q_batch_seqlen_shape, num_head, head_dim_v, dtype=out_torch_dtype, device=device
         )
     else:
-        _validate_tensor(out, "out", (*q_batch_seqlen_shape, num_head, head_dim_v), out_torch_dtype, device)
+        _validate_tensor(
+            out, "out", (*q_batch_seqlen_shape, num_head, head_dim_v), out_torch_dtype, device
+        )
 
     if lse is None:
         lse = (
@@ -239,12 +243,12 @@ def _flash_attn_fwd(
 
     dtype = torch2cute_dtype_map[q.dtype]
     compute_capability = (
-        _get_device_capability()
-        if _compute_capability is None
-        else _compute_capability
+        _get_device_capability() if _compute_capability is None else _compute_capability
     )
 
-    assert compute_capability in [9, 10, 11], f"Unsupported compute capability {compute_capability}. Supported: 9.x, 10.x, 11.x."
+    assert compute_capability in [9, 10, 11], (
+        f"Unsupported compute capability {compute_capability}. Supported: 9.x, 10.x, 11.x."
+    )
 
     use_block_sparsity = block_sparse_tensors is not None
 
@@ -268,20 +272,29 @@ def _flash_attn_fwd(
             n_block_size = 192
 
     if compute_capability in [10, 11]:
-        if (
-            pack_gqa
-            and (128 % qhead_per_kvhead != 0)
-        ):
+        if pack_gqa and (128 % qhead_per_kvhead != 0):
             pack_gqa = False
         # TODO: fix GQA + SplitKV + non-varlen
         if pack_gqa and num_splits != 1 and cu_seqlens_q is None:
             pack_gqa = False
 
     if num_splits < 1:
-        max_seqlen_k = seqlen_k if cu_seqlens_k is None else (cu_seqlens_k[1:] - cu_seqlens_k[:-1]).max().item()
-        max_seqlen_q = seqlen_q if cu_seqlens_q is None else (cu_seqlens_q[1:] - cu_seqlens_q[:-1]).max().item()
+        max_seqlen_k = (
+            seqlen_k
+            if cu_seqlens_k is None
+            else (cu_seqlens_k[1:] - cu_seqlens_k[:-1]).max().item()
+        )
+        max_seqlen_q = (
+            seqlen_q
+            if cu_seqlens_q is None
+            else (cu_seqlens_q[1:] - cu_seqlens_q[:-1]).max().item()
+        )
         seqlen_q_packgqa = max_seqlen_q * qhead_per_kvhead
-        seqlen_k_loaded = max_seqlen_k if not local else max(0, min(max_seqlen_k, window_size_right + window_size_left + 1 + m_block_size))
+        seqlen_k_loaded = (
+            max_seqlen_k
+            if not local
+            else max(0, min(max_seqlen_k, window_size_right + window_size_left + 1 + m_block_size))
+        )
         num_n_blocks = (seqlen_k_loaded + n_block_size - 1) // n_block_size
         num_m_blocks = (seqlen_q_packgqa + m_block_size - 1) // m_block_size
         total_mblocks = batch_size * num_head_kv * num_m_blocks
@@ -294,7 +307,14 @@ def _flash_attn_fwd(
 
     is_split_kv = num_splits > 1
     if is_split_kv:
-        out_partial = torch.empty(num_splits, *q_batch_seqlen_shape, num_head, head_dim_v, dtype=torch.float32, device=device)
+        out_partial = torch.empty(
+            num_splits,
+            *q_batch_seqlen_shape,
+            num_head,
+            head_dim_v,
+            dtype=torch.float32,
+            device=device,
+        )
         lse_partial = torch.empty(num_splits, *lse_shape, dtype=torch.float32, device=device)
 
     # hash score and mask mods for compile cache
@@ -369,9 +389,7 @@ def _flash_attn_fwd(
             seqused_k_tensor,
             learnable_sink_tensor,
         ) = [
-            to_cute_tensor(t, assumed_align=4, leading_dim=0)
-            if t is not None
-            else None
+            to_cute_tensor(t, assumed_align=4, leading_dim=0) if t is not None else None
             for t in (cu_seqlens_q, cu_seqlens_k, seqused_q, seqused_k, learnable_sink)
         ]
         page_table_tensor = (
@@ -392,10 +410,17 @@ def _flash_attn_fwd(
         sparse_tensors = None
         if block_sparse_tensors is not None:
             if seqlen_q is None:
-                raise ValueError("Block sparsity requires fixed-length sequences (seqlen_q must be known).")
+                raise ValueError(
+                    "Block sparsity requires fixed-length sequences (seqlen_q must be known)."
+                )
             expected_count_shape, expected_index_shape = get_block_sparse_expected_shapes(
-                batch_size, num_head, seqlen_q, seqlen_k,
-                m_block_size, n_block_size, compute_capability,
+                batch_size,
+                num_head,
+                seqlen_q,
+                seqlen_k,
+                m_block_size,
+                n_block_size,
+                compute_capability,
             )
             compile_time_normalized = normalize_block_sparse_tensors(
                 block_sparse_tensors,
@@ -406,7 +431,9 @@ def _flash_attn_fwd(
 
         cute_aux_tensors = None
         if aux_tensors is not None:
-            cute_aux_tensors = [to_cute_tensor(buf, assumed_align=None, fully_dynamic=True) for buf in aux_tensors]
+            cute_aux_tensors = [
+                to_cute_tensor(buf, assumed_align=None, fully_dynamic=True) for buf in aux_tensors
+            ]
 
         if compute_capability == 9:
             assert page_table is None, "paged KV not supported on SM 9.0"
@@ -444,16 +471,15 @@ def _flash_attn_fwd(
                 m_block_size=m_block_size,
                 n_block_size=n_block_size,
                 is_persistent=not causal
-                    and not local
-                    and cu_seqlens_q is None
-                    and seqused_q is None
-                    and not is_split_kv,
+                and not local
+                and cu_seqlens_q is None
+                and seqused_q is None
+                and not is_split_kv,
                 score_mod=score_mod,
                 mask_mod=mask_mod,
                 has_aux_tensors=aux_tensors is not None,
                 paged_kv_non_tma=page_size not in [None, 128],
-                is_varlen_q=cu_seqlens_q is not None
-                    or seqused_q is not None,
+                is_varlen_q=cu_seqlens_q is not None or seqused_q is not None,
             )
         else:
             raise ValueError(
@@ -486,8 +512,13 @@ def _flash_attn_fwd(
     normalized_block_sparse_tensors = None
     if block_sparse_tensors is not None:
         expected_count_shape, expected_index_shape = get_block_sparse_expected_shapes(
-            batch_size, num_head, seqlen_q, seqlen_k,
-            m_block_size, n_block_size, compute_capability,
+            batch_size,
+            num_head,
+            seqlen_q,
+            seqlen_k,
+            m_block_size,
+            n_block_size,
+            compute_capability,
         )
         normalized_block_sparse_tensors = normalize_block_sparse_tensors(
             block_sparse_tensors,
@@ -568,7 +599,9 @@ def _flash_attn_bwd(
     block_sparse_tensors: Optional[BlockSparseTensorsTorch] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     compute_capability = _get_device_capability()
-    assert compute_capability in [9, 10, 11], "Unsupported compute capability. Supported: 9.x, 10.x, 11.x"
+    assert compute_capability in [9, 10, 11], (
+        "Unsupported compute capability. Supported: 9.x, 10.x, 11.x"
+    )
 
     if compute_capability == 9:
         m_block_size = 80 if not causal else 64
@@ -583,7 +616,9 @@ def _flash_attn_bwd(
         AtomLayoutNdKV = 2
         AtomLayoutMdQ = 1
         cluster_size = 1
-        assert window_size_left is None and window_size_right is None, "local not supported yet on 9.x"
+        assert window_size_left is None and window_size_right is None, (
+            "local not supported yet on 9.x"
+        )
     else:
         m_block_size = 128
         n_block_size = 128
@@ -676,17 +711,21 @@ def _flash_attn_bwd(
     if pack_gqa is None:
         pack_gqa = qhead_per_kvhead > 1
     if compute_capability in [10, 11]:
-        pack_gqa = False # override for now
+        pack_gqa = False  # override for now
     if compute_capability not in [10, 11]:
         assert deterministic is False, "bwd deterministic only supported for sm100/sm110 for now"
 
     if score_mod is not None:
         assert score_mod_bwd is not None, "score_mod_bwd is required when score_mod is provided"
-        assert softcap == 0.0, "softcap and score_mod are mutually exclusive (different log2 scaling)"
+        assert softcap == 0.0, (
+            "softcap and score_mod are mutually exclusive (different log2 scaling)"
+        )
         assert cu_seqlens_q is None and cu_seqlens_k is None, (
             "varlen + score_mod not supported in bwd yet"
         )
-        assert compute_capability in [10, 11], "score_mod in bwd only supported on SM100/SM110 for now"
+        assert compute_capability in [10, 11], (
+            "score_mod in bwd only supported on SM100/SM110 for now"
+        )
 
     device = q.device
     out_torch_dtype = q.dtype
@@ -781,13 +820,34 @@ def _flash_attn_bwd(
     current_stream = cuda.CUstream(torch.cuda.current_stream().cuda_stream)
 
     if deterministic:
-        dQ_semaphore = torch.zeros(batch_size, num_head, seqlen_q_rounded // m_block_size, 1, dtype=torch.int32, device="cuda")
+        dQ_semaphore = torch.zeros(
+            batch_size,
+            num_head,
+            seqlen_q_rounded // m_block_size,
+            1,
+            dtype=torch.int32,
+            device="cuda",
+        )
     else:
         dQ_semaphore = None
 
     if deterministic and qhead_per_kvhead > 1:
-        dK_semaphore = torch.zeros(batch_size, num_head_kv, seqlen_k_rounded // n_block_size, 2, dtype=torch.int32, device="cuda")
-        dV_semaphore = torch.zeros(batch_size, num_head_kv, seqlen_k_rounded // n_block_size, 2, dtype=torch.int32, device="cuda")
+        dK_semaphore = torch.zeros(
+            batch_size,
+            num_head_kv,
+            seqlen_k_rounded // n_block_size,
+            2,
+            dtype=torch.int32,
+            device="cuda",
+        )
+        dV_semaphore = torch.zeros(
+            batch_size,
+            num_head_kv,
+            seqlen_k_rounded // n_block_size,
+            2,
+            dtype=torch.int32,
+            device="cuda",
+        )
     else:
         dK_semaphore = None
         dV_semaphore = None
@@ -902,16 +962,17 @@ def _flash_attn_bwd(
             to_cute_tensor(t) for t in (dq_accum, dpsum, lse_log2)
         ]
         if qhead_per_kvhead > 1:
-            dk_accum_tensor, dv_accum_tensor = [
-                to_cute_tensor(t) for t in (dk_accum, dv_accum)
-            ]
+            dk_accum_tensor, dv_accum_tensor = [to_cute_tensor(t) for t in (dk_accum, dv_accum)]
         cu_seqlens_q_tensor, cu_seqlens_k_tensor, seqused_q_tensor, seqused_k_tensor = [
             to_cute_tensor(t, assumed_align=4) if t is not None else None
             for t in (cu_seqlens_q, cu_seqlens_k, seqused_q, seqused_k)
         ]
         dQ_semaphore_tensor, dK_semaphore_tensor, dV_semaphore_tensor = [
-            utils.convert_from_dlpack_leading_static(t.detach(), leading_dim=3, alignment=4, stride_order=t.dim_order())
-            if t is not None else None
+            utils.convert_from_dlpack_leading_static(
+                t.detach(), leading_dim=3, alignment=4, stride_order=t.dim_order()
+            )
+            if t is not None
+            else None
             for t in (dQ_semaphore, dK_semaphore, dV_semaphore)
         ]
         fa_bwd_sm80 = FlashAttentionBackwardSm80(
@@ -979,8 +1040,13 @@ def _flash_attn_bwd(
         sparse_tensors_compile = None
         if block_sparse_tensors is not None and compute_capability in [10, 11]:
             expected_count_shape, expected_index_shape = get_block_sparse_expected_shapes_bwd(
-                batch_size, num_head, seqlen_q, seqlen_k,
-                m_block_size, n_block_size, subtile_factor,
+                batch_size,
+                num_head,
+                seqlen_q,
+                seqlen_k,
+                m_block_size,
+                n_block_size,
+                subtile_factor,
             )
             compile_time_normalized = normalize_block_sparse_tensors(
                 block_sparse_tensors,
@@ -1020,8 +1086,13 @@ def _flash_attn_bwd(
     normalized_block_sparse_tensors = None
     if block_sparse_tensors is not None and compute_capability in [10, 11]:
         expected_count_shape, expected_index_shape = get_block_sparse_expected_shapes_bwd(
-            batch_size, num_head, seqlen_q, seqlen_k,
-            m_block_size, n_block_size, subtile_factor,
+            batch_size,
+            num_head,
+            seqlen_q,
+            seqlen_k,
+            m_block_size,
+            n_block_size,
+            subtile_factor,
         )
         normalized_block_sparse_tensors = normalize_block_sparse_tensors(
             block_sparse_tensors,
@@ -1190,7 +1261,9 @@ class FlashAttnFunc(torch.autograd.Function):
     ):
         # Only create block sparse tensors if at least one block sparse parameter is provided
         block_sparse_tensors = None
-        if any(t is not None for t in [full_block_cnt, full_block_idx, mask_block_cnt, mask_block_idx]):
+        if any(
+            t is not None for t in [full_block_cnt, full_block_idx, mask_block_cnt, mask_block_idx]
+        ):
             block_sparse_tensors = BlockSparseTensorsTorch(
                 full_block_cnt=full_block_cnt,
                 full_block_idx=full_block_idx,
@@ -1210,7 +1283,7 @@ class FlashAttnFunc(torch.autograd.Function):
             num_splits=num_splits,
             pack_gqa=pack_gqa,
             mask_mod=mask_mod,
-            block_sparse_tensors=block_sparse_tensors
+            block_sparse_tensors=block_sparse_tensors,
         )
         ctx.save_for_backward(q, k, v, out, lse)
         ctx.softmax_scale = softmax_scale
@@ -1493,9 +1566,7 @@ def _flash_attn_fwd_combine(
     )
 
     if compile_key not in _flash_attn_fwd_combine.compile_cache:
-        out_partial_tensor = to_cute_tensor(
-            out_partial, leading_dim=4 if not is_varlen else 3
-        )
+        out_partial_tensor = to_cute_tensor(out_partial, leading_dim=4 if not is_varlen else 3)
         lse_partial_tensor = to_cute_tensor(
             lse_partial, assumed_align=4, leading_dim=lse_partial.ndim - 2
         )
@@ -1507,9 +1578,7 @@ def _flash_attn_fwd_combine(
         )
 
         optional_tensors = [
-            to_cute_tensor(t, assumed_align=4, leading_dim=0)
-            if t is not None
-            else None
+            to_cute_tensor(t, assumed_align=4, leading_dim=0) if t is not None else None
             for t in (cu_seqlens, seqused, num_splits_dynamic_ptr, semaphore_to_reset)
         ]
         cu_seqlens_tensor, seqused_tensor, num_splits_dynamic_tensor, semaphore_tensor = (
