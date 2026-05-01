@@ -32,6 +32,7 @@ on:
 jobs:
   build-wheels:
     strategy:
+      fail-fast: false
       matrix:
         runs-on: [self-hosted, self-hosted-arm, ubuntu-22.04-arm]  # TODO: Remove hosted arm.
     uses: ./.github/workflows/_build.yml
