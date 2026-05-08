@@ -232,6 +232,32 @@ jobs:
         run: |
           ls ${{ inputs.cwd }}/dist
 
+      - name: Verify wheel does not own flash_attn/cute (collides with flash-attn-4)
+        if: inputs.cwd == '.'
+        run: |
+          set -e
+          cd ${{ inputs.cwd }}/dist
+          for whl in *.whl; do
+            echo "Checking $whl"
+            python3 - <<EOF
+import sys, zipfile
+with zipfile.ZipFile("$whl", "r") as z:
+    names = z.namelist()
+    record = next(n for n in names if n.endswith(".dist-info/RECORD"))
+    record_text = z.read(record).decode("utf-8")
+bad_files = [n for n in names if n.startswith("flash_attn/cute/")]
+bad_record = [l for l in record_text.splitlines() if l.startswith("flash_attn/cute/")]
+if bad_files or bad_record:
+    print(f"ERROR: wheel contains flash_attn/cute/ — collides with flash-attn-4")
+    print(f"  files in zip: {len(bad_files)}")
+    print(f"  RECORD entries: {len(bad_record)}")
+    if bad_files: print(f"  example file: {bad_files[0]}")
+    if bad_record: print(f"  example RECORD: {bad_record[0]}")
+    sys.exit(1)
+print(f"OK: $whl has no flash_attn/cute/ files or RECORD entries")
+EOF
+          done
+
       - name: Get Release with tag
         id: get_current_release
         uses: joutvhu/get-release@v1
